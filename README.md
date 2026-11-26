@@ -1,2 +1,1215 @@
-# BIMASENA-Playstation
-bimasena playstasion
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SIM Kaur Umum & Perencanaan - Firestore</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #ffffff !important; }
+      .print-card { box-shadow: none !important; border: none !important; background: #ffffff !important; }
+
+      body[data-print-tab="surat"] .tab-panel:not(#panel-surat) { display: none !important; }
+      body[data-print-tab="surat"] #panel-surat { display: block !important; }
+
+      body[data-print-tab="rkp"] .tab-panel:not(#panel-rkp) { display: none !important; }
+      body[data-print-tab="rkp"] #panel-rkp { display: block !important; }
+
+      body[data-print-tab="inventaris"] .tab-panel:not(#panel-inventaris) { display: none !important; }
+      body[data-print-tab="inventaris"] #panel-inventaris { display: block !important; }
+
+      body[data-print-tab="apbdes"] .tab-panel:not(#panel-apbdes) { display: none !important; }
+      body[data-print-tab="apbdes"] #panel-apbdes { display: block !important; }
+    }
+  </style>
+</head>
+<body data-active-tab="surat" class="min-h-screen bg-gradient-to-br from-emerald-50 via-sky-50 to-indigo-100 text-slate-800 antialiased">
+  <div class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+    <!-- Header Gradasi -->
+    <header class="rounded-2xl bg-gradient-to-r from-teal-700 via-sky-700 to-indigo-800 text-white p-6 shadow-xl flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <div class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider bg-white/15 px-3 py-1 rounded-full mb-2">
+          <span>Cloud Firestore</span>
+          <span id="status-koneksi" class="text-emerald-200">Terhubung</span>
+        </div>
+        <h1 class="text-2xl font-bold tracking-tight">SIM Kaur Umum &amp; Perencanaan Desa</h1>
+        <p class="text-sm text-sky-100">Agenda Surat, Perencanaan RKPDes, Inventaris Aset, &amp; Penyusunan APBDes</p>
+      </div>
+      <div class="flex flex-wrap gap-2.5 text-xs sm:text-sm">
+        <div class="bg-white/15 backdrop-blur border border-white/25 rounded-full px-4 py-2">
+          RKPDes: <strong id="sum-rkp" class="font-bold text-emerald-200">Rp 0</strong>
+        </div>
+        <div class="bg-white/15 backdrop-blur border border-white/25 rounded-full px-4 py-2">
+          Belanja APBDes: <strong id="sum-apb" class="font-bold text-sky-200">Rp 0</strong>
+        </div>
+        <div class="bg-white/15 backdrop-blur border border-white/25 rounded-full px-4 py-2">
+          Aset: <strong id="sum-aset" class="font-bold text-indigo-200">Rp 0</strong>
+        </div>
+      </div>
+    </header>
+
+    <!-- Notifikasi -->
+    <div id="notif-box" class="hidden rounded-xl bg-gradient-to-r from-teal-50 via-sky-50 to-indigo-50 border-l-4 border-sky-600 px-4 py-3 text-sm font-semibold text-slate-800 shadow"></div>
+
+    <!-- Navigasi Tab -->
+    <nav class="no-print flex flex-wrap gap-2 bg-white/80 backdrop-blur p-2 rounded-2xl shadow border border-slate-200/70">
+      <button type="button" data-tab="surat" class="tab-btn px-4 py-2.5 rounded-xl text-sm font-bold transition bg-gradient-to-r from-teal-600 via-sky-600 to-indigo-600 text-white shadow">
+        1. Buku Agenda Surat
+      </button>
+      <button type="button" data-tab="rkp" class="tab-btn px-4 py-2.5 rounded-xl text-sm font-bold transition text-slate-600 hover:bg-sky-50">
+        2. Perencanaan RKPDes
+      </button>
+      <button type="button" data-tab="inventaris" class="tab-btn px-4 py-2.5 rounded-xl text-sm font-bold transition text-slate-600 hover:bg-sky-50">
+        3. Inventaris Aset
+      </button>
+      <button type="button" data-tab="apbdes" class="tab-btn px-4 py-2.5 rounded-xl text-sm font-bold transition text-slate-600 hover:bg-sky-50">
+        4. Penyusunan APBDes
+      </button>
+    </nav>
+
+    <!-- ==================== 1. TAB AGENDA SURAT ==================== -->
+    <section id="panel-surat" class="tab-panel space-y-5">
+      <div class="no-print rounded-2xl bg-white/90 backdrop-blur border border-slate-200/80 p-6 shadow-lg">
+        <h2 id="judul-form-surat" class="text-lg font-bold bg-gradient-to-r from-teal-700 to-indigo-700 bg-clip-text text-transparent mb-4">
+          Catat Surat Masuk / Keluar
+        </h2>
+        <form id="form-surat" class="space-y-4">
+          <input type="hidden" id="surat-edit-id" />
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Tanggal</label>
+              <input type="date" id="surat-tanggal" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Nomor Surat</label>
+              <input type="text" id="surat-nomor" placeholder="141/045/DS/2026" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Jenis Surat</label>
+              <select id="surat-jenis" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none">
+                <option value="Masuk">Surat Masuk</option>
+                <option value="Keluar">Surat Keluar</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Asal / Tujuan</label>
+              <input type="text" id="surat-asal" placeholder="Kecamatan / BPD / Lembaga" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Disposisi</label>
+              <input type="text" id="surat-disposisi" placeholder="Diteruskan ke Sekdes" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Nama File Arsip PDF (Catatan)</label>
+              <input type="text" id="surat-file" placeholder="contoh: 141-045-ds-2026.pdf" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">Perihal</label>
+            <textarea id="surat-perihal" rows="2" placeholder="Ringkasan isi surat..." required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none"></textarea>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="submit" class="rounded-xl bg-gradient-to-r from-teal-600 via-sky-600 to-indigo-600 hover:from-teal-700 hover:to-indigo-700 text-white text-sm font-bold px-5 py-2.5 shadow transition">
+              Simpan Agenda Surat
+            </button>
+            <button type="button" id="batal-surat" class="hidden rounded-xl bg-slate-500 hover:bg-slate-600 text-white text-sm font-bold px-4 py-2.5 transition">
+              Batal Edit
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="print-card rounded-2xl bg-white/90 backdrop-blur border border-slate-200/80 p-6 shadow-lg">
+        <div class="no-print flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div class="flex flex-wrap gap-2">
+            <select id="filter-surat-jenis" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white">
+              <option value="">Semua Jenis</option>
+              <option value="Masuk">Surat Masuk</option>
+              <option value="Keluar">Surat Keluar</option>
+            </select>
+            <input type="text" id="cari-surat" placeholder="Cari nomor / asal / perihal..." class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white" />
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="window.__cetakKegiatan('surat')" class="cursor-pointer rounded-xl bg-gradient-to-r from-slate-700 to-slate-900 text-white text-sm font-bold px-4 py-2 shadow hover:opacity-95 transition">
+              Print Agenda Surat
+            </button>
+            <button type="button" onclick="window.__downloadCSVKegiatan('surat')" class="cursor-pointer rounded-xl bg-gradient-to-r from-sky-600 to-blue-700 text-white text-sm font-bold px-4 py-2 shadow hover:opacity-95 transition">
+              Download CSV
+            </button>
+            <button type="button" onclick="window.__downloadExcelKegiatan('surat')" class="cursor-pointer rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-sm font-bold px-4 py-2 shadow hover:opacity-95 transition">
+              Download Excel
+            </button>
+          </div>
+        </div>
+        <h3 class="text-base font-bold text-slate-800 mb-3">Daftar Buku Agenda Surat</h3>
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full text-sm border-collapse bg-white">
+            <thead class="bg-gradient-to-r from-sky-100 via-teal-50 to-indigo-100 text-slate-800">
+              <tr>
+                <th class="p-3 text-left border-b">Tanggal</th>
+                <th class="p-3 text-left border-b">No. Surat</th>
+                <th class="p-3 text-left border-b">Jenis</th>
+                <th class="p-3 text-left border-b">Asal / Tujuan</th>
+                <th class="p-3 text-left border-b">Perihal</th>
+                <th class="p-3 text-left border-b">Disposisi</th>
+                <th class="p-3 text-left border-b">Arsip</th>
+                <th class="no-print p-3 text-left border-b">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-surat" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 2. TAB RKPDES ==================== -->
+    <section id="panel-rkp" class="tab-panel hidden space-y-5">
+      <div class="no-print rounded-2xl bg-white/90 backdrop-blur border border-slate-200/80 p-6 shadow-lg">
+        <h2 id="judul-form-rkp" class="text-lg font-bold bg-gradient-to-r from-teal-700 to-indigo-700 bg-clip-text text-transparent mb-4">
+          Input Rencana Kegiatan RKPDes
+        </h2>
+        <form id="form-rkp" class="space-y-4">
+          <input type="hidden" id="rkp-edit-id" />
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Tahun Anggaran</label>
+              <input type="number" id="rkp-tahun" value="2026" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Bidang</label>
+              <select id="rkp-bidang" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                <option value="Penyelenggaraan Pemerintahan">Penyelenggaraan Pemerintahan</option>
+                <option value="Pembangunan">Pembangunan</option>
+                <option value="Pembinaan Kemasyarakatan">Pembinaan Kemasyarakatan</option>
+                <option value="Pemberdayaan Masyarakat">Pemberdayaan Masyarakat</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Nama Kegiatan</label>
+              <input type="text" id="rkp-nama" placeholder="Pembangunan Rabat Beton Dusun I" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Sumber Usulan</label>
+              <input type="text" id="rkp-sumber" placeholder="Musrenbangdes / Dusun" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Volume</label>
+              <input type="number" step="0.01" id="rkp-vol" value="1" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Satuan</label>
+              <input type="text" id="rkp-satuan" value="paket" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Harga Satuan (Rp)</label>
+              <input type="number" id="rkp-harga" value="0" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Status</label>
+              <select id="rkp-status" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                <option value="Draft">Draft</option>
+                <option value="Diubah">Diubah</option>
+                <option value="Ditetapkan">Ditetapkan</option>
+                <option value="Batal">Batal</option>
+              </select>
+            </div>
+          </div>
+          <div class="rounded-xl bg-gradient-to-r from-teal-50 via-sky-50 to-indigo-50 border border-dashed border-sky-300 px-4 py-2.5 text-sm">
+            Perkiraan Total Biaya: <strong id="rkp-preview" class="text-sky-800">Rp 0</strong>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="submit" class="rounded-xl bg-gradient-to-r from-teal-600 via-sky-600 to-indigo-600 text-white text-sm font-bold px-5 py-2.5 shadow">
+              Simpan Kegiatan RKPDes
+            </button>
+            <button type="button" id="batal-rkp" class="hidden rounded-xl bg-slate-500 text-white text-sm font-bold px-4 py-2.5">
+              Batal Edit
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="print-card rounded-2xl bg-white/90 backdrop-blur border border-slate-200/80 p-6 shadow-lg">
+        <div class="no-print flex flex-wrap justify-between items-center gap-3 mb-3">
+          <h3 class="text-base font-bold text-slate-800">Daftar Kegiatan RKPDes</h3>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="window.__cetakKegiatan('rkp')" class="cursor-pointer rounded-xl bg-gradient-to-r from-slate-700 to-slate-900 text-white text-sm font-bold px-4 py-2 shadow hover:opacity-95 transition">
+              Print RKPDes
+            </button>
+            <button type="button" onclick="window.__downloadCSVKegiatan('rkp')" class="cursor-pointer rounded-xl bg-gradient-to-r from-sky-600 to-blue-700 text-white text-sm font-bold px-4 py-2 shadow hover:opacity-95 transition">
+              Download CSV
+            </button>
+            <button type="button" onclick="window.__downloadExcelKegiatan('rkp')" class="cursor-pointer rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-sm font-bold px-4 py-2 shadow hover:opacity-95 transition">
+              Download Excel
+            </button>
+          </div>
+        </div>
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full text-sm border-collapse bg-white">
+            <thead class="bg-gradient-to-r from-sky-100 via-teal-50 to-indigo-100 text-slate-800">
+              <tr>
+                <th class="p-3 text-left border-b">Tahun</th>
+                <th class="p-3 text-left border-b">Bidang</th>
+                <th class="p-3 text-left border-b">Nama Kegiatan</th>
+                <th class="p-3 text-left border-b">Sumber Usulan</th>
+                <th class="p-3 text-right border-b">Volume</th>
+                <th class="p-3 text-left border-b">Satuan</th>
+                <th class="p-3 text-right border-b">Harga Satuan</th>
+                <th class="p-3 text-right border-b">Total Biaya</th>
+                <th class="p-3 text-left border-b">Status</th>
+                <th class="no-print p-3 text-left border-b">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-rkp" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 3. TAB INVENTARIS ASET ==================== -->
+    <section id="panel-inventaris" class="tab-panel hidden space-y-5">
+      <div class="no-print rounded-2xl bg-white/90 backdrop-blur border border-slate-200/80 p-6 shadow-lg">
+        <h2 id="judul-form-aset" class="text-lg font-bold bg-gradient-to-r from-teal-700 to-indigo-700 bg-clip-text text-transparent mb-4">
+          Input Inventaris Aset Desa
+        </h2>
+        <form id="form-aset" class="space-y-4">
+          <input type="hidden" id="aset-edit-id" />
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Kode Barang</label>
+              <input type="text" id="aset-kode" placeholder="INV-001" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Nama Barang</label>
+              <input type="text" id="aset-nama" placeholder="Laptop / Printer / Meja Kantor" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Kategori</label>
+              <input type="text" id="aset-kategori" placeholder="Peralatan Kantor / Kendaraan" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Tahun Perolehan</label>
+              <input type="number" id="aset-tahun" value="2026" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Jumlah</label>
+              <input type="number" id="aset-jumlah" value="1" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Satuan</label>
+              <input type="text" id="aset-satuan" value="unit" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Nilai Perolehan (Rp)</label>
+              <input type="number" id="aset-nilai" value="0" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Kondisi</label>
+              <select id="aset-kondisi" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                <option value="Baik">Baik</option>
+                <option value="Rusak Ringan">Rusak Ringan</option>
+                <option value="Rusak Berat">Rusak Berat</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Lokasi / Pemegang</label>
+              <input type="text" id="aset-lokasi" value="Kantor Desa" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">Keterangan</label>
+            <textarea id="aset-ket" rows="2" placeholder="Catatan tambahan aset..." class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"></textarea>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="submit" class="rounded-xl bg-gradient-to-r from-teal-600 via-sky-600 to-indigo-600 text-white text-sm font-bold px-5 py-2.5 shadow">
+              Simpan Inventaris Aset
+            </button>
+            <button type="button" id="batal-aset" class="hidden rounded-xl bg-slate-500 text-white text-sm font-bold px-4 py-2.5">
+              Batal Edit
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="print-card rounded-2xl bg-white/90 backdrop-blur border border-slate-200/80 p-6 shadow-lg">
+        <div class="no-print flex flex-wrap justify-between items-center gap-3 mb-4">
+          <div class="flex flex-wrap gap-2">
+            <select id="filter-aset-kondisi" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white">
+              <option value="">Semua Kondisi</option>
+              <option value="Baik">Baik</option>
+              <option value="Rusak Ringan">Rusak Ringan</option>
+              <option value="Rusak Berat">Rusak Berat</option>
+            </select>
+            <input type="text" id="cari-aset" placeholder="Cari kode / nama / lokasi..." class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white" />
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="window.__cetakKegiatan('inventaris')" class="cursor-pointer rounded-xl bg-gradient-to-r from-slate-700 to-slate-900 text-white text-sm font-bold px-4 py-2 shadow hover:opacity-95 transition">
+              Print Inventaris Aset
+            </button>
+            <button type="button" onclick="window.__downloadCSVKegiatan('inventaris')" class="cursor-pointer rounded-xl bg-gradient-to-r from-sky-600 to-blue-700 text-white text-sm font-bold px-4 py-2 shadow hover:opacity-95 transition">
+              Download CSV
+            </button>
+            <button type="button" onclick="window.__downloadExcelKegiatan('inventaris')" class="cursor-pointer rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-sm font-bold px-4 py-2 shadow hover:opacity-95 transition">
+              Download Excel
+            </button>
+          </div>
+        </div>
+        <h3 class="text-base font-bold text-slate-800 mb-3">Daftar Inventaris Aset Desa</h3>
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full text-sm border-collapse bg-white">
+            <thead class="bg-gradient-to-r from-sky-100 via-teal-50 to-indigo-100 text-slate-800">
+              <tr>
+                <th class="p-3 text-left border-b">Kode</th>
+                <th class="p-3 text-left border-b">Nama Barang</th>
+                <th class="p-3 text-left border-b">Kategori</th>
+                <th class="p-3 text-left border-b">Tahun</th>
+                <th class="p-3 text-right border-b">Jumlah</th>
+                <th class="p-3 text-left border-b">Satuan</th>
+                <th class="p-3 text-right border-b">Nilai Perolehan</th>
+                <th class="p-3 text-left border-b">Kondisi</th>
+                <th class="p-3 text-left border-b">Lokasi</th>
+                <th class="p-3 text-left border-b">Keterangan</th>
+                <th class="no-print p-3 text-left border-b">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-aset" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 4. TAB APBDES ==================== -->
+    <section id="panel-apbdes" class="tab-panel hidden space-y-5">
+      <div class="no-print rounded-2xl bg-white/90 backdrop-blur border border-slate-200/80 p-6 shadow-lg">
+        <h2 id="judul-form-apb" class="text-lg font-bold bg-gradient-to-r from-teal-700 to-indigo-700 bg-clip-text text-transparent mb-4">
+          Input Pos Anggaran APBDes (Murni &amp; Perubahan)
+        </h2>
+        <form id="form-apb" class="space-y-4">
+          <input type="hidden" id="apb-edit-id" />
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Tahun Anggaran</label>
+              <input type="number" id="apb-tahun" value="2026" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Jenis Pos</label>
+              <select id="apb-pos" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
+                <option value="Pendapatan">Pendapatan</option>
+                <option value="Belanja" selected>Belanja</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Kode Rekening</label>
+              <input type="text" id="apb-kode" placeholder="2.1.01.01" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Bidang</label>
+              <input type="text" id="apb-bidang" placeholder="Penyelenggaraan Pemerintahan / Pembangunan" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Sumber Dana</label>
+              <input type="text" id="apb-sumber" value="DDS" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Anggaran Semula / Murni (Rp)</label>
+              <input type="number" id="apb-semula" value="0" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Volume (Perubahan)</label>
+              <input type="number" step="0.01" id="apb-vol" value="1" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Satuan</label>
+              <input type="text" id="apb-satuan" value="paket" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Harga Satuan Perubahan (Rp)</label>
+              <input type="number" id="apb-harga" value="0" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">Uraian</label>
+            <textarea id="apb-uraian" rows="2" placeholder="Uraian kegiatan / rekening anggaran..." required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"></textarea>
+          </div>
+          <div class="rounded-xl bg-gradient-to-r from-teal-50 via-sky-50 to-indigo-50 border border-dashed border-sky-300 px-4 py-2.5 text-sm">
+            Perkiraan Anggaran Perubahan: <strong id="apb-preview" class="text-sky-800">Rp 0</strong>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="submit" class="rounded-xl bg-gradient-to-r from-teal-600 via-sky-600 to-indigo-600 text-white text-sm font-bold px-5 py-2.5 shadow">
+              Simpan Pos APBDes
+            </button>
+            <button type="button" id="batal-apb" class="hidden rounded-xl bg-slate-500 text-white text-sm font-bold px-4 py-2.5">
+              Batal Edit
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="print-card rounded-2xl bg-white/90 backdrop-blur border border-slate-200/80 p-6 shadow-lg space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="rounded-xl p-4 bg-gradient-to-br from-sky-50 to-indigo-50 border border-sky-200/70">
+            <span class="text-xs font-bold text-sky-700">Pendapatan (Semula / Perubahan)</span>
+            <div id="rekap-pendapatan" class="text-sm font-bold text-slate-800 mt-1">Rp 0 / Rp 0</div>
+          </div>
+          <div class="rounded-xl p-4 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/70">
+            <span class="text-xs font-bold text-emerald-700">Belanja (Semula / Perubahan)</span>
+            <div id="rekap-belanja" class="text-sm font-bold text-slate-800 mt-1">Rp 0 / Rp 0</div>
+          </div>
+          <div class="rounded-xl p-4 bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200/70">
+            <span class="text-xs font-bold text-indigo-700">Surplus / (Defisit) Perubahan</span>
+            <div id="rekap-surplus" class="text-sm font-bold text-slate-800 mt-1">Rp 0</div>
+          </div>
+        </div>
+
+        <div class="no-print flex flex-wrap justify-between items-center gap-3">
+          <div class="flex flex-wrap gap-2">
+            <input type="number" id="filter-apb-tahun" placeholder="Tahun (mis. 2026)" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white w-36" />
+            <select id="filter-apb-pos" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white">
+              <option value="">Semua Pos</option>
+              <option value="Pendapatan">Pendapatan</option>
+              <option value="Belanja">Belanja</option>
+            </select>
+            <input type="text" id="cari-apb" placeholder="Cari kode / uraian / bidang / sumber..." class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white" />
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="window.__cetakKegiatan('apbdes')" class="cursor-pointer rounded-xl bg-gradient-to-r from-slate-700 to-slate-900 text-white text-sm font-bold px-4 py-2 shadow hover:opacity-95 transition">
+              Print APBDes
+            </button>
+            <button type="button" onclick="window.__downloadCSVKegiatan('apbdes')" class="cursor-pointer rounded-xl bg-gradient-to-r from-sky-600 to-blue-700 text-white text-sm font-bold px-4 py-2 shadow hover:opacity-95 transition">
+              Download CSV
+            </button>
+            <button type="button" onclick="window.__downloadExcelKegiatan('apbdes')" class="cursor-pointer rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white text-sm font-bold px-4 py-2 shadow hover:opacity-95 transition">
+              Download Excel
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full text-sm border-collapse bg-white">
+            <thead class="bg-gradient-to-r from-sky-100 via-teal-50 to-indigo-100 text-slate-800">
+              <tr>
+                <th class="p-3 text-left border-b">Tahun</th>
+                <th class="p-3 text-left border-b">Pos</th>
+                <th class="p-3 text-left border-b">Kode Rek</th>
+                <th class="p-3 text-left border-b">Bidang</th>
+                <th class="p-3 text-left border-b">Uraian</th>
+                <th class="p-3 text-left border-b">Sumber Dana</th>
+                <th class="p-3 text-right border-b">Vol</th>
+                <th class="p-3 text-left border-b">Satuan</th>
+                <th class="p-3 text-right border-b">Harga Satuan</th>
+                <th class="p-3 text-right border-b">Semula (Rp)</th>
+                <th class="p-3 text-right border-b">Perubahan (Rp)</th>
+                <th class="p-3 text-right border-b">Selisih (Rp)</th>
+                <th class="no-print p-3 text-left border-b">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-apb" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+    import {
+      getFirestore, collection, addDoc, updateDoc, deleteDoc,
+      doc, onSnapshot, query, orderBy, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBtjZzwh_2s9Yk2RonUE3jMEwwGEtn6uvE",
+      authDomain: "app-kaur-umum-perencanaan.firebaseapp.com",
+      databaseURL: "https://app-kaur-umum-perencanaan-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "app-kaur-umum-perencanaan",
+      storageBucket: "app-kaur-umum-perencanaan.firebasestorage.app",
+      messagingSenderId: "468317922989",
+      appId: "1:468317922989:web:2bc809e5239d38ad390824",
+      measurementId: "G-4KTPKC7YDM"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const statusEl = document.getElementById("status-koneksi");
+    statusEl.textContent = "Terhubung";
+
+    const rupiah = (angka) => "Rp " + Math.round(Number(angka) || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const esc = (str) => String(str ?? "").replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+
+    function showNotif(msg) {
+      const box = document.getElementById("notif-box");
+      box.textContent = msg;
+      box.classList.remove("hidden");
+      clearTimeout(window._notifTimer);
+      window._notifTimer = setTimeout(() => box.classList.add("hidden"), 4000);
+    }
+
+    const tabBtns = document.querySelectorAll(".tab-btn");
+    const panels = document.querySelectorAll(".tab-panel");
+    function setTab(tab) {
+      document.body.dataset.activeTab = tab;
+      tabBtns.forEach((b) => {
+        const active = b.dataset.tab === tab;
+        b.className = active
+          ? "tab-btn px-4 py-2.5 rounded-xl text-sm font-bold transition bg-gradient-to-r from-teal-600 via-sky-600 to-indigo-600 text-white shadow"
+          : "tab-btn px-4 py-2.5 rounded-xl text-sm font-bold transition text-slate-600 hover:bg-sky-50";
+      });
+      panels.forEach((p) => p.classList.toggle("hidden", p.id !== "panel-" + tab));
+    }
+    tabBtns.forEach((b) => b.addEventListener("click", () => setTab(b.dataset.tab)));
+
+    let suratData = [], rkpData = [], asetData = [], apbData = [];
+    document.getElementById("surat-tanggal").value = new Date().toISOString().slice(0, 10);
+
+    // ==================== 1. AGENDA SURAT ====================
+    const formSurat = document.getElementById("form-surat");
+    const batalSurat = document.getElementById("batal-surat");
+    formSurat.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const editId = document.getElementById("surat-edit-id").value;
+      const payload = {
+        tanggal: document.getElementById("surat-tanggal").value,
+        nomor_surat: document.getElementById("surat-nomor").value.trim(),
+        jenis: document.getElementById("surat-jenis").value,
+        asal_tujuan: document.getElementById("surat-asal").value.trim(),
+        perihal: document.getElementById("surat-perihal").value.trim(),
+        disposisi: document.getElementById("surat-disposisi").value.trim(),
+        file_nama: document.getElementById("surat-file").value.trim()
+      };
+      if (editId) {
+        await updateDoc(doc(db, "agenda_surat", editId), payload);
+        showNotif("Agenda surat diperbarui di Firestore.");
+      } else {
+        await addDoc(collection(db, "agenda_surat"), { ...payload, created_at: serverTimestamp() });
+        showNotif("Agenda surat tersimpan ke Firestore.");
+      }
+      resetSuratForm();
+    });
+
+    function resetSuratForm() {
+      formSurat.reset();
+      document.getElementById("surat-edit-id").value = "";
+      document.getElementById("surat-tanggal").value = new Date().toISOString().slice(0, 10);
+      document.getElementById("judul-form-surat").textContent = "Catat Surat Masuk / Keluar";
+      batalSurat.classList.add("hidden");
+    }
+    batalSurat.addEventListener("click", resetSuratForm);
+
+    function getFilteredSuratRows() {
+      const fJenis = document.getElementById("filter-surat-jenis").value;
+      const fCari = document.getElementById("cari-surat").value.toLowerCase().trim();
+      return suratData.filter((d) => {
+        if (fJenis && d.jenis !== fJenis) return false;
+        if (fCari && !`${d.nomor_surat} ${d.asal_tujuan} ${d.perihal}`.toLowerCase().includes(fCari)) return false;
+        return true;
+      });
+    }
+
+    function renderSurat() {
+      const rows = getFilteredSuratRows();
+      const tbody = document.getElementById("tbody-surat");
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-500">Belum ada data agenda surat.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = rows.map((d) => `
+        <tr class="hover:bg-sky-50/60">
+          <td class="p-3">${esc(d.tanggal)}</td>
+          <td class="p-3 font-medium">${esc(d.nomor_surat)}</td>
+          <td class="p-3"><span class="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-teal-100 to-sky-100 text-teal-800">${esc(d.jenis)}</span></td>
+          <td class="p-3">${esc(d.asal_tujuan)}</td>
+          <td class="p-3">${esc(d.perihal)}</td>
+          <td class="p-3">${esc(d.disposisi || "-")}</td>
+          <td class="p-3">${esc(d.file_nama || "-")}</td>
+          <td class="no-print p-3 whitespace-nowrap space-x-1">
+            <button type="button" onclick="editSurat('${d.id}')" class="px-2.5 py-1 rounded-md text-xs font-bold text-white bg-gradient-to-r from-teal-600 to-sky-600">Edit</button>
+            <button type="button" onclick="hapusDoc('agenda_surat','${d.id}','Agenda surat dihapus.')" class="px-2.5 py-1 rounded-md text-xs font-bold text-white bg-gradient-to-r from-rose-600 to-red-600">Hapus</button>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    window.editSurat = (id) => {
+      const d = suratData.find((x) => x.id === id);
+      if (!d) return;
+      document.getElementById("surat-edit-id").value = d.id;
+      document.getElementById("surat-tanggal").value = d.tanggal || "";
+      document.getElementById("surat-nomor").value = d.nomor_surat || "";
+      document.getElementById("surat-jenis").value = d.jenis || "Masuk";
+      document.getElementById("surat-asal").value = d.asal_tujuan || "";
+      document.getElementById("surat-perihal").value = d.perihal || "";
+      document.getElementById("surat-disposisi").value = d.disposisi || "";
+      document.getElementById("surat-file").value = d.file_nama || "";
+      document.getElementById("judul-form-surat").textContent = "Edit Agenda Surat";
+      batalSurat.classList.remove("hidden");
+    };
+
+    document.getElementById("filter-surat-jenis").addEventListener("change", renderSurat);
+    document.getElementById("cari-surat").addEventListener("input", renderSurat);
+
+    // ==================== 2. RKPDES ====================
+    const formRkp = document.getElementById("form-rkp");
+    const batalRkp = document.getElementById("batal-rkp");
+    const updateRkpPreview = () => {
+      const v = parseFloat(document.getElementById("rkp-vol").value) || 0;
+      const h = parseInt(document.getElementById("rkp-harga").value, 10) || 0;
+      document.getElementById("rkp-preview").textContent = rupiah(Math.round(v * h));
+    };
+    document.getElementById("rkp-vol").addEventListener("input", updateRkpPreview);
+    document.getElementById("rkp-harga").addEventListener("input", updateRkpPreview);
+
+    formRkp.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const editId = document.getElementById("rkp-edit-id").value;
+      const vol = Math.max(0, parseFloat(document.getElementById("rkp-vol").value) || 0);
+      const harga = Math.max(0, parseInt(document.getElementById("rkp-harga").value, 10) || 0);
+      const payload = {
+        tahun: parseInt(document.getElementById("rkp-tahun").value, 10) || 2026,
+        bidang: document.getElementById("rkp-bidang").value,
+        nama_kegiatan: document.getElementById("rkp-nama").value.trim(),
+        sumber_usulan: document.getElementById("rkp-sumber").value.trim(),
+        volume: vol,
+        satuan: document.getElementById("rkp-satuan").value.trim() || "paket",
+        harga_satuan: harga,
+        total_biaya: Math.round(vol * harga),
+        status: document.getElementById("rkp-status").value
+      };
+      if (editId) {
+        await updateDoc(doc(db, "rkpdes_kegiatan", editId), payload);
+        showNotif("Kegiatan RKPDes diperbarui di Firestore.");
+      } else {
+        await addDoc(collection(db, "rkpdes_kegiatan"), { ...payload, created_at: serverTimestamp() });
+        showNotif("Kegiatan RKPDes tersimpan ke Firestore.");
+      }
+      resetRkpForm();
+    });
+
+    function resetRkpForm() {
+      formRkp.reset();
+      document.getElementById("rkp-edit-id").value = "";
+      document.getElementById("judul-form-rkp").textContent = "Input Rencana Kegiatan RKPDes";
+      batalRkp.classList.add("hidden");
+      updateRkpPreview();
+    }
+    batalRkp.addEventListener("click", resetRkpForm);
+
+    function renderRkp() {
+      const tbody = document.getElementById("tbody-rkp");
+      let total = 0;
+      rkpData.forEach((d) => { total += Number(d.total_biaya) || 0; });
+      document.getElementById("sum-rkp").textContent = rupiah(total);
+
+      if (!rkpData.length) {
+        tbody.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-slate-500">Belum ada kegiatan RKPDes.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = rkpData.map((d) => `
+        <tr class="hover:bg-sky-50/60">
+          <td class="p-3">${esc(d.tahun)}</td>
+          <td class="p-3">${esc(d.bidang)}</td>
+          <td class="p-3 font-medium">${esc(d.nama_kegiatan)}</td>
+          <td class="p-3">${esc(d.sumber_usulan)}</td>
+          <td class="p-3 text-right">${esc(d.volume)}</td>
+          <td class="p-3">${esc(d.satuan)}</td>
+          <td class="p-3 text-right">${rupiah(d.harga_satuan)}</td>
+          <td class="p-3 text-right font-bold">${rupiah(d.total_biaya)}</td>
+          <td class="p-3"><span class="px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800">${esc(d.status)}</span></td>
+          <td class="no-print p-3 whitespace-nowrap space-x-1">
+            <button type="button" onclick="editRkp('${d.id}')" class="px-2.5 py-1 rounded-md text-xs font-bold text-white bg-gradient-to-r from-teal-600 to-sky-600">Edit</button>
+            <button type="button" onclick="hapusDoc('rkpdes_kegiatan','${d.id}','Kegiatan RKPDes dihapus.')" class="px-2.5 py-1 rounded-md text-xs font-bold text-white bg-gradient-to-r from-rose-600 to-red-600">Hapus</button>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    window.editRkp = (id) => {
+      const d = rkpData.find((x) => x.id === id);
+      if (!d) return;
+      document.getElementById("rkp-edit-id").value = d.id;
+      document.getElementById("rkp-tahun").value = d.tahun ?? 2026;
+      document.getElementById("rkp-bidang").value = d.bidang || "Pembangunan";
+      document.getElementById("rkp-nama").value = d.nama_kegiatan || "";
+      document.getElementById("rkp-sumber").value = d.sumber_usulan || "";
+      document.getElementById("rkp-vol").value = d.volume ?? 1;
+      document.getElementById("rkp-satuan").value = d.satuan || "paket";
+      document.getElementById("rkp-harga").value = d.harga_satuan ?? 0;
+      document.getElementById("rkp-status").value = d.status || "Draft";
+      document.getElementById("judul-form-rkp").textContent = "Edit Kegiatan RKPDes";
+      batalRkp.classList.remove("hidden");
+      updateRkpPreview();
+    };
+
+    // ==================== 3. INVENTARIS ASET ====================
+    const formAset = document.getElementById("form-aset");
+    const batalAset = document.getElementById("batal-aset");
+    formAset.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const editId = document.getElementById("aset-edit-id").value;
+      const payload = {
+        kode_barang: document.getElementById("aset-kode").value.trim(),
+        nama_barang: document.getElementById("aset-nama").value.trim(),
+        kategori: document.getElementById("aset-kategori").value.trim(),
+        tahun_perolehan: parseInt(document.getElementById("aset-tahun").value, 10) || 2026,
+        jumlah: Math.max(0, parseInt(document.getElementById("aset-jumlah").value, 10) || 0),
+        satuan: document.getElementById("aset-satuan").value.trim() || "unit",
+        nilai_perolehan: Math.max(0, parseInt(document.getElementById("aset-nilai").value, 10) || 0),
+        kondisi: document.getElementById("aset-kondisi").value,
+        lokasi_pemegang: document.getElementById("aset-lokasi").value.trim() || "Kantor Desa",
+        keterangan: document.getElementById("aset-ket").value.trim()
+      };
+      if (editId) {
+        await updateDoc(doc(db, "inventaris_aset", editId), payload);
+        showNotif("Inventaris aset diperbarui di Firestore.");
+      } else {
+        await addDoc(collection(db, "inventaris_aset"), { ...payload, created_at: serverTimestamp() });
+        showNotif("Inventaris aset tersimpan ke Firestore.");
+      }
+      resetAsetForm();
+    });
+
+    function resetAsetForm() {
+      formAset.reset();
+      document.getElementById("aset-edit-id").value = "";
+      document.getElementById("judul-form-aset").textContent = "Input Inventaris Aset Desa";
+      batalAset.classList.add("hidden");
+    }
+    batalAset.addEventListener("click", resetAsetForm);
+
+    function getFilteredAsetRows() {
+      const fKondisi = document.getElementById("filter-aset-kondisi").value;
+      const fCari = document.getElementById("cari-aset").value.toLowerCase().trim();
+      return asetData.filter((d) => {
+        if (fKondisi && d.kondisi !== fKondisi) return false;
+        if (fCari && !`${d.kode_barang} ${d.nama_barang} ${d.lokasi_pemegang}`.toLowerCase().includes(fCari)) return false;
+        return true;
+      });
+    }
+
+    function renderAset() {
+      const rows = getFilteredAsetRows();
+
+      let totalAset = 0;
+      rows.forEach((d) => { totalAset += Number(d.nilai_perolehan) || 0; });
+      document.getElementById("sum-aset").textContent = rupiah(totalAset);
+
+      const tbody = document.getElementById("tbody-aset");
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="11" class="p-4 text-center text-slate-500">Belum ada data inventaris aset.</td></tr>`;
+        return;
+      }
+      const badgeClass = (k) => k === "Baik"
+        ? "bg-emerald-100 text-emerald-800"
+        : (k === "Rusak Ringan" ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-800");
+
+      tbody.innerHTML = rows.map((d) => `
+        <tr class="hover:bg-sky-50/60">
+          <td class="p-3 font-mono text-xs">${esc(d.kode_barang)}</td>
+          <td class="p-3 font-medium">${esc(d.nama_barang)}</td>
+          <td class="p-3">${esc(d.kategori)}</td>
+          <td class="p-3">${esc(d.tahun_perolehan)}</td>
+          <td class="p-3 text-right">${esc(d.jumlah)}</td>
+          <td class="p-3">${esc(d.satuan)}</td>
+          <td class="p-3 text-right font-semibold">${rupiah(d.nilai_perolehan)}</td>
+          <td class="p-3"><span class="px-2.5 py-1 rounded-full text-xs font-bold ${badgeClass(d.kondisi)}">${esc(d.kondisi)}</span></td>
+          <td class="p-3">${esc(d.lokasi_pemegang)}</td>
+          <td class="p-3">${esc(d.keterangan || "-")}</td>
+          <td class="no-print p-3 whitespace-nowrap space-x-1">
+            <button type="button" onclick="editAset('${d.id}')" class="px-2.5 py-1 rounded-md text-xs font-bold text-white bg-gradient-to-r from-teal-600 to-sky-600">Edit</button>
+            <button type="button" onclick="hapusDoc('inventaris_aset','${d.id}','Data aset dihapus.')" class="px-2.5 py-1 rounded-md text-xs font-bold text-white bg-gradient-to-r from-rose-600 to-red-600">Hapus</button>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    window.editAset = (id) => {
+      const d = asetData.find((x) => x.id === id);
+      if (!d) return;
+      document.getElementById("aset-edit-id").value = d.id;
+      document.getElementById("aset-kode").value = d.kode_barang || "";
+      document.getElementById("aset-nama").value = d.nama_barang || "";
+      document.getElementById("aset-kategori").value = d.kategori || "";
+      document.getElementById("aset-tahun").value = d.tahun_perolehan ?? 2026;
+      document.getElementById("aset-jumlah").value = d.jumlah ?? 1;
+      document.getElementById("aset-satuan").value = d.satuan || "unit";
+      document.getElementById("aset-nilai").value = d.nilai_perolehan ?? 0;
+      document.getElementById("aset-kondisi").value = d.kondisi || "Baik";
+      document.getElementById("aset-lokasi").value = d.lokasi_pemegang || "Kantor Desa";
+      document.getElementById("aset-ket").value = d.keterangan || "";
+      document.getElementById("judul-form-aset").textContent = "Edit Inventaris Aset";
+      batalAset.classList.remove("hidden");
+    };
+
+    document.getElementById("filter-aset-kondisi").addEventListener("change", renderAset);
+    document.getElementById("cari-aset").addEventListener("input", renderAset);
+
+    // ==================== 4. APBDES ====================
+    const formApb = document.getElementById("form-apb");
+    const batalApb = document.getElementById("batal-apb");
+    const updateApbPreview = () => {
+      const v = parseFloat(document.getElementById("apb-vol").value) || 0;
+      const h = parseInt(document.getElementById("apb-harga").value, 10) || 0;
+      document.getElementById("apb-preview").textContent = rupiah(Math.round(v * h));
+    };
+    document.getElementById("apb-vol").addEventListener("input", updateApbPreview);
+    document.getElementById("apb-harga").addEventListener("input", updateApbPreview);
+
+    function getFilteredApbRows() {
+      const fTahun = parseInt(document.getElementById("filter-apb-tahun").value, 10) || 0;
+      const fPos = document.getElementById("filter-apb-pos").value;
+      const fCari = document.getElementById("cari-apb").value.toLowerCase().trim();
+
+      return apbData.filter((d) => {
+        if (fTahun > 0 && Number(d.tahun) !== fTahun) return false;
+        if (fPos && d.jenis_pos !== fPos) return false;
+        if (fCari && !`${d.kode_rekening} ${d.uraian} ${d.bidang} ${d.sumber_dana}`.toLowerCase().includes(fCari)) return false;
+        return true;
+      });
+    }
+
+    function buildExportDataByKegiatan(kegiatan) {
+      if (kegiatan === "surat") {
+        const rows = getFilteredSuratRows();
+        const data = rows.map((d) => ({
+          Tanggal: d.tanggal ?? "",
+          "Nomor Surat": d.nomor_surat ?? "",
+          Jenis: d.jenis ?? "",
+          "Asal / Tujuan": d.asal_tujuan ?? "",
+          Perihal: d.perihal ?? "",
+          Disposisi: d.disposisi ?? "",
+          Arsip: d.file_nama ?? ""
+        }));
+        return { rows: data, baseName: "Buku_Agenda_Surat", sheetName: "AgendaSurat", label: "Buku Agenda Surat" };
+      }
+
+      if (kegiatan === "rkp") {
+        let tot = 0;
+        const rows = rkpData.map((d) => {
+          const t = Math.round(Number(d.total_biaya) || 0);
+          tot += t;
+          return {
+            Tahun: d.tahun ?? "",
+            Bidang: d.bidang ?? "",
+            "Nama Kegiatan": d.nama_kegiatan ?? "",
+            "Sumber Usulan": d.sumber_usulan ?? "",
+            Volume: Number(d.volume) || 0,
+            Satuan: d.satuan ?? "",
+            "Harga Satuan": Math.round(Number(d.harga_satuan) || 0),
+            "Total Biaya": t,
+            Status: d.status ?? ""
+          };
+        });
+        rows.push({
+          Tahun: "",
+          Bidang: "",
+          "Nama Kegiatan": "JUMLAH TOTAL",
+          "Sumber Usulan": "",
+          Volume: "",
+          Satuan: "",
+          "Harga Satuan": "",
+          "Total Biaya": tot,
+          Status: ""
+        });
+        return { rows, baseName: "RKPDes_Kegiatan", sheetName: "RKPDes", label: "Perencanaan RKPDes" };
+      }
+
+      if (kegiatan === "inventaris") {
+        const rowsList = getFilteredAsetRows();
+        let totNilai = 0;
+        const rows = rowsList.map((d) => {
+          const n = Math.round(Number(d.nilai_perolehan) || 0);
+          totNilai += n;
+          return {
+            "Kode Barang": d.kode_barang ?? "",
+            "Nama Barang": d.nama_barang ?? "",
+            Kategori: d.kategori ?? "",
+            "Tahun Perolehan": d.tahun_perolehan ?? "",
+            Jumlah: Number(d.jumlah) || 0,
+            Satuan: d.satuan ?? "",
+            "Nilai Perolehan": n,
+            Kondisi: d.kondisi ?? "",
+            "Lokasi / Pemegang": d.lokasi_pemegang ?? "",
+            Keterangan: d.keterangan ?? ""
+          };
+        });
+        rows.push({
+          "Kode Barang": "",
+          "Nama Barang": "JUMLAH TOTAL",
+          Kategori: "",
+          "Tahun Perolehan": "",
+          Jumlah: "",
+          Satuan: "",
+          "Nilai Perolehan": totNilai,
+          Kondisi: "",
+          "Lokasi / Pemegang": "",
+          Keterangan: ""
+        });
+        return { rows, baseName: "Inventaris_Aset", sheetName: "InventarisAset", label: "Inventaris Aset" };
+      }
+
+      const rowsList = getFilteredApbRows();
+      let totSemula = 0, totUbah = 0, totSelisih = 0;
+      const rows = rowsList.map((d) => {
+        const s = Math.round(Number(d.anggaran_semula) || 0);
+        const u = Math.round(Number(d.anggaran_perubahan) || 0);
+        const sel = u - s;
+        totSemula += s;
+        totUbah += u;
+        totSelisih += sel;
+        return {
+          Tahun: d.tahun ?? "",
+          Pos: d.jenis_pos ?? "",
+          "Kode Rekening": d.kode_rekening ?? "",
+          Bidang: d.bidang ?? "",
+          Uraian: d.uraian ?? "",
+          "Sumber Dana": d.sumber_dana ?? "",
+          Volume: Number(d.volume) || 0,
+          Satuan: d.satuan ?? "",
+          "Harga Satuan": Math.round(Number(d.harga_satuan) || 0),
+          "Semula (Rp)": s,
+          "Perubahan (Rp)": u,
+          "Selisih (Rp)": sel
+        };
+      });
+      rows.push({
+        Tahun: "",
+        Pos: "",
+        "Kode Rekening": "",
+        Bidang: "",
+        Uraian: "JUMLAH TOTAL",
+        "Sumber Dana": "",
+        Volume: "",
+        Satuan: "",
+        "Harga Satuan": "",
+        "Semula (Rp)": totSemula,
+        "Perubahan (Rp)": totUbah,
+        "Selisih (Rp)": totSelisih
+      });
+      const thFilter = document.getElementById("filter-apb-tahun").value.trim() || "Semua";
+      return { rows, baseName: `APBDes_${thFilter}`, sheetName: "APBDes", label: "Penyusunan APBDes" };
+    }
+
+    window.__cetakKegiatan = (kegiatan) => {
+      document.body.dataset.printTab = kegiatan;
+      window.print();
+      setTimeout(() => {
+        delete document.body.dataset.printTab;
+      }, 300);
+    };
+
+    window.addEventListener("afterprint", () => {
+      delete document.body.dataset.printTab;
+    });
+
+    window.__downloadCSVKegiatan = (kegiatan) => {
+      try {
+        const { rows, baseName, label } = buildExportDataByKegiatan(kegiatan);
+        const headers = rows.length ? Object.keys(rows[0]) : ["Data"];
+        const nl = "\r\n";
+        const csvLines = [
+          headers.map((h) => `"${String(h).replace(/"/g, '""')}"`).join(","),
+          ...rows.map((row) =>
+            headers.map((h) => `"${String(row[h] ?? "").replace(/"/g, '""')}"`).join(",")
+          )
+        ];
+        const blob = new Blob(["\uFEFF" + csvLines.join(nl)], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${baseName}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showNotif(`File CSV ${label} berhasil diunduh.`);
+      } catch (err) {
+        console.error(err);
+        showNotif("Gagal mengunduh file CSV.");
+      }
+    };
+
+    window.__downloadExcelKegiatan = (kegiatan) => {
+      try {
+        const { rows, baseName, sheetName, label } = buildExportDataByKegiatan(kegiatan);
+        if (window.XLSX && typeof window.XLSX.utils?.json_to_sheet === "function") {
+          const ws = window.XLSX.utils.json_to_sheet(rows);
+          const wb = window.XLSX.utils.book_new();
+          window.XLSX.utils.book_append_sheet(wb, ws, sheetName);
+          window.XLSX.writeFile(wb, `${baseName}.xlsx`);
+          showNotif(`File Excel (.xlsx) ${label} berhasil diunduh.`);
+        } else {
+          const headers = rows.length ? Object.keys(rows[0]) : ["Data"];
+          const tableHtml = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+            <head><meta charset="UTF-8"></head>
+            <body>
+              <table border="1">
+                <thead><tr>${headers.map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead>
+                <tbody>
+                  ${rows.map((r) => `<tr>${headers.map((h) => `<td>${esc(r[h] ?? "")}</td>`).join("")}</tr>`).join("")}
+                </tbody>
+              </table>
+            </body></html>
+          `;
+          const blob = new Blob(["\uFEFF" + tableHtml], { type: "application/vnd.ms-excel;charset=utf-8;" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${baseName}.xls`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showNotif(`File Excel (.xls) ${label} berhasil diunduh.`);
+        }
+      } catch (err) {
+        console.error(err);
+        showNotif("Gagal mengunduh file Excel.");
+      }
+    };
+
+    formApb.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const editId = document.getElementById("apb-edit-id").value;
+      const vol = Math.max(0, parseFloat(document.getElementById("apb-vol").value) || 0);
+      const harga = Math.max(0, parseInt(document.getElementById("apb-harga").value, 10) || 0);
+      const ubah = Math.round(vol * harga);
+      const payload = {
+        tahun: parseInt(document.getElementById("apb-tahun").value, 10) || 2026,
+        jenis_pos: document.getElementById("apb-pos").value,
+        kode_rekening: document.getElementById("apb-kode").value.trim(),
+        bidang: document.getElementById("apb-bidang").value.trim(),
+        uraian: document.getElementById("apb-uraian").value.trim(),
+        sumber_dana: document.getElementById("apb-sumber").value.trim() || "DDS",
+        volume: vol,
+        satuan: document.getElementById("apb-satuan").value.trim() || "paket",
+        harga_satuan: harga,
+        jumlah_anggaran: ubah,
+        anggaran_semula: Math.max(0, parseInt(document.getElementById("apb-semula").value, 10) || 0),
+        anggaran_perubahan: ubah
+      };
+      if (editId) {
+        await updateDoc(doc(db, "apbdes_anggaran", editId), payload);
+        showNotif("Pos APBDes diperbarui di Firestore.");
+      } else {
+        await addDoc(collection(db, "apbdes_anggaran"), { ...payload, created_at: serverTimestamp() });
+        showNotif("Pos APBDes tersimpan ke Firestore.");
+      }
+      resetApbForm();
+    });
+
+    function resetApbForm() {
+      formApb.reset();
+      document.getElementById("apb-edit-id").value = "";
+      document.getElementById("judul-form-apb").textContent = "Input Pos Anggaran APBDes (Murni & Perubahan)";
+      batalApb.classList.add("hidden");
+      updateApbPreview();
+    }
+    batalApb.addEventListener("click", resetApbForm);
+
+    function renderApb() {
+      const rows = getFilteredApbRows();
+
+      let pSemula = 0, pUbah = 0, bSemula = 0, bUbah = 0;
+      rows.forEach((d) => {
+        const s = Number(d.anggaran_semula) || 0;
+        const u = Number(d.anggaran_perubahan) || 0;
+        if (d.jenis_pos === "Pendapatan") { pSemula += s; pUbah += u; }
+        else { bSemula += s; bUbah += u; }
+      });
+      const surplus = pUbah - bUbah;
+
+      document.getElementById("sum-apb").textContent = rupiah(bUbah);
+      document.getElementById("rekap-pendapatan").textContent = `${rupiah(pSemula)} / ${rupiah(pUbah)}`;
+      document.getElementById("rekap-belanja").textContent = `${rupiah(bSemula)} / ${rupiah(bUbah)}`;
+      document.getElementById("rekap-surplus").textContent = surplus < 0 ? `(${rupiah(Math.abs(surplus))})` : rupiah(surplus);
+
+      const tbody = document.getElementById("tbody-apb");
+      if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="13" class="p-4 text-center text-slate-500">Belum ada data pos anggaran APBDes.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = rows.map((d) => {
+        const s = Number(d.anggaran_semula) || 0;
+        const u = Number(d.anggaran_perubahan) || 0;
+        const sel = u - s;
+        const badge = d.jenis_pos === "Pendapatan"
+          ? "bg-blue-100 text-blue-800"
+          : "bg-orange-100 text-orange-800";
+        return `
+          <tr class="hover:bg-sky-50/60">
+            <td class="p-3">${esc(d.tahun)}</td>
+            <td class="p-3"><span class="px-2.5 py-1 rounded-full text-xs font-bold ${badge}">${esc(d.jenis_pos)}</span></td>
+            <td class="p-3 font-mono text-xs">${esc(d.kode_rekening)}</td>
+            <td class="p-3">${esc(d.bidang)}</td>
+            <td class="p-3 font-medium">${esc(d.uraian)}</td>
+            <td class="p-3">${esc(d.sumber_dana)}</td>
+            <td class="p-3 text-right">${esc(d.volume)}</td>
+            <td class="p-3">${esc(d.satuan)}</td>
+            <td class="p-3 text-right">${rupiah(d.harga_satuan)}</td>
+            <td class="p-3 text-right">${rupiah(s)}</td>
+            <td class="p-3 text-right font-bold">${rupiah(u)}</td>
+            <td class="p-3 text-right">${sel < 0 ? `(${rupiah(Math.abs(sel))})` : rupiah(sel)}</td>
+            <td class="no-print p-3 whitespace-nowrap space-x-1">
+              <button type="button" onclick="editApb('${d.id}')" class="px-2.5 py-1 rounded-md text-xs font-bold text-white bg-gradient-to-r from-teal-600 to-sky-600">Edit</button>
+              <button type="button" onclick="hapusDoc('apbdes_anggaran','${d.id}','Pos APBDes dihapus.')" class="px-2.5 py-1 rounded-md text-xs font-bold text-white bg-gradient-to-r from-rose-600 to-red-600">Hapus</button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    window.editApb = (id) => {
+      const d = apbData.find((x) => x.id === id);
+      if (!d) return;
+      document.getElementById("apb-edit-id").value = d.id;
+      document.getElementById("apb-tahun").value = d.tahun ?? 2026;
+      document.getElementById("apb-pos").value = d.jenis_pos || "Belanja";
+      document.getElementById("apb-kode").value = d.kode_rekening || "";
+      document.getElementById("apb-bidang").value = d.bidang || "";
+      document.getElementById("apb-uraian").value = d.uraian || "";
+      document.getElementById("apb-sumber").value = d.sumber_dana || "DDS";
+      document.getElementById("apb-semula").value = d.anggaran_semula ?? 0;
+      document.getElementById("apb-vol").value = d.volume ?? 1;
+      document.getElementById("apb-satuan").value = d.satuan || "paket";
+      document.getElementById("apb-harga").value = d.harga_satuan ?? 0;
+      document.getElementById("judul-form-apb").textContent = "Edit Pos Anggaran APBDes";
+      batalApb.classList.remove("hidden");
+      updateApbPreview();
+    };
+
+    document.getElementById("filter-apb-tahun").addEventListener("input", renderApb);
+    document.getElementById("filter-apb-pos").addEventListener("change", renderApb);
+    document.getElementById("cari-apb").addEventListener("input", renderApb);
+
+    window.hapusDoc = async (colName, id, msg) => {
+      if (!confirm("Yakin ingin menghapus data ini dari Firestore?")) return;
+      await deleteDoc(doc(db, colName, id));
+      showNotif(msg);
+    };
+
+    onSnapshot(query(collection(db, "agenda_surat"), orderBy("tanggal", "desc")), (snap) => {
+      suratData = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      renderSurat();
+    });
+
+    onSnapshot(query(collection(db, "rkpdes_kegiatan"), orderBy("tahun", "desc")), (snap) => {
+      rkpData = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      renderRkp();
+    });
+
+    onSnapshot(query(collection(db, "inventaris_aset"), orderBy("kode_barang", "asc")), (snap) => {
+      asetData = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      renderAset();
+    });
+
+    onSnapshot(query(collection(db, "apbdes_anggaran"), orderBy("kode_rekening", "asc")), (snap) => {
+      apbData = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      renderApb();
+    });
+  </script>
+</body>
+</html>
