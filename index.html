@@ -30,7 +30,7 @@
   <div class="max-w-7xl mx-auto px-4 py-6 space-y-6">
 
     <!-- Header Gradasi -->
-    <header class="rounded-2xl bg-gradient-to-r from-teal-700 via-sky-700 to-indigo-800 text-white p-6 shadow-xl flex flex-wrap items-center justify-between gap-4">
+    <header class="no-print rounded-2xl bg-gradient-to-r from-teal-700 via-sky-700 to-indigo-800 text-white p-6 shadow-xl flex flex-wrap items-center justify-between gap-4">
       <div>
         <div class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider bg-white/15 px-3 py-1 rounded-full mb-2">
           <span>Cloud Firestore</span>
@@ -73,10 +73,10 @@
 
     <!-- ==================== 1. TAB AGENDA SURAT ==================== -->
     <section id="panel-surat" class="tab-panel space-y-5">
-      <div class="no-print rounded-2xl bg-white/90 backdrop-blur border border-slate-200/80 p-6 shadow-lg">
-        <h2 id="judul-form-surat" class="text-lg font-bold bg-gradient-to-r from-teal-700 to-indigo-700 bg-clip-text text-transparent mb-4">
-          Catat Surat Masuk / Keluar
-        </h2>
+     <div class="no-print rounded-2xl bg-white/90 backdrop-blur border border-slate-200/80 p-6 shadow-lg">
+  <h2 id="judul-form-surat" ...>
+    Catat Surat Masuk / Keluar
+  </h2>
         <form id="form-surat" class="space-y-4">
           <input type="hidden" id="surat-edit-id" />
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -128,6 +128,9 @@
       </div>
 
       <div class="print-card rounded-2xl bg-white/90 backdrop-blur border border-slate-200/80 p-6 shadow-lg">
+        <div class="hidden print:block mb-3">
+    <h2 class="text-lg font-bold text-slate-900">BUKU AGENDA SURAT MASUK / KELUAR</h2>
+  </div>
         <div class="no-print flex flex-wrap items-center justify-between gap-3 mb-4">
           <div class="flex flex-wrap gap-2">
             <select id="filter-surat-jenis" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white">
@@ -238,6 +241,9 @@
       </div>
 
       <div class="print-card rounded-2xl bg-white/90 backdrop-blur border border-slate-200/80 p-6 shadow-lg">
+        <div class="hidden print:block mb-3">
+    <h2 class="text-lg font-bold text-slate-900">Perencanaan RKPDes</h2>
+  </div>
         <div class="no-print flex flex-wrap justify-between items-center gap-3 mb-3">
           <h3 class="text-base font-bold text-slate-800">Daftar Kegiatan RKPDes</h3>
           <div class="flex flex-wrap gap-2">
@@ -340,6 +346,9 @@
       </div>
 
       <div class="print-card rounded-2xl bg-white/90 backdrop-blur border border-slate-200/80 p-6 shadow-lg">
+        <div class="hidden print:block mb-3">
+    <h2 class="text-lg font-bold text-slate-900">Iventaris Aset</h2>
+  </div>
         <div class="no-print flex flex-wrap justify-between items-center gap-3 mb-4">
           <div class="flex flex-wrap gap-2">
             <select id="filter-aset-kondisi" class="rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white">
@@ -454,6 +463,9 @@
       </div>
 
       <div class="print-card rounded-2xl bg-white/90 backdrop-blur border border-slate-200/80 p-6 shadow-lg space-y-4">
+        <div class="hidden print:block mb-3">
+    <h2 class="text-lg font-bold text-slate-900">APBDES</h2>
+  </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div class="rounded-xl p-4 bg-gradient-to-br from-sky-50 to-indigo-50 border border-sky-200/70">
             <span class="text-xs font-bold text-sky-700">Pendapatan (Semula / Perubahan)</span>
@@ -580,6 +592,7 @@
         nomor_surat: document.getElementById("surat-nomor").value.trim(),
         jenis: document.getElementById("surat-jenis").value,
         asal_tujuan: document.getElementById("surat-asal").value.trim(),
+        asal_tujuan: document.getElementById("surat-asal").value.trim(),
         perihal: document.getElementById("surat-perihal").value.trim(),
         disposisi: document.getElementById("surat-disposisi").value.trim(),
         file_nama: document.getElementById("surat-file").value.trim()
@@ -626,6 +639,7 @@
           <td class="p-3 font-medium">${esc(d.nomor_surat)}</td>
           <td class="p-3"><span class="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-teal-100 to-sky-100 text-teal-800">${esc(d.jenis)}</span></td>
           <td class="p-3">${esc(d.asal_tujuan)}</td>
+          <td class="p-3">${esc(d.penerima)}</td>
           <td class="p-3">${esc(d.perihal)}</td>
           <td class="p-3">${esc(d.disposisi || "-")}</td>
           <td class="p-3">${esc(d.file_nama || "-")}</td>
@@ -645,6 +659,7 @@
       document.getElementById("surat-nomor").value = d.nomor_surat || "";
       document.getElementById("surat-jenis").value = d.jenis || "Masuk";
       document.getElementById("surat-asal").value = d.asal_tujuan || "";
+      document.getElementById("surat-asal").value = d.penerima || "";
       document.getElementById("surat-perihal").value = d.perihal || "";
       document.getElementById("surat-disposisi").value = d.disposisi || "";
       document.getElementById("surat-file").value = d.file_nama || "";
